@@ -160,3 +160,5 @@ python kitti_object.py -p --vis
 ## Acknowlegement
 
 Code is mainly from [f-pointnet](https://github.com/charlesq34/frustum-pointnets) and [MV3D](https://github.com/bostondiditeam/MV3D)
+# kitti_object_vis
+# kitti_object_vis

@@ -16,6 +16,7 @@ sys.path.append(os.path.join(ROOT_DIR, "mayavi"))
 import kitti_util as utils
 import argparse
 
+
 try:
     raw_input  # Python 2
 except NameError:
@@ -30,13 +31,18 @@ class kitti_object(object):
     def __init__(self, root_dir, split="training", args=None):
         """root_dir contains training and testing folders"""
         self.root_dir = root_dir
+        #print(split)
+        split = "training"
         self.split = split
+        #print('*********************************************************')
         print(root_dir, split)
         self.split_dir = os.path.join(root_dir, split)
 
         if split == "training":
+            #self.num_samples = 4001
             self.num_samples = 7481
         elif split == "testing":
+            #self.num_samples = 3480
             self.num_samples = 7518
         else:
             print("Unknown split: %s" % (split))
@@ -45,6 +51,9 @@ class kitti_object(object):
         lidar_dir = "velodyne"
         depth_dir = "depth"
         pred_dir = "pred"
+        pred_dir2 = "final_result"
+        pred_dir3 = "data"
+
         if args is not None:
             lidar_dir = args.lidar
             depth_dir = args.depthdir
@@ -57,7 +66,12 @@ class kitti_object(object):
         self.depthpc_dir = os.path.join(self.split_dir, "depth_pc")
         self.lidar_dir = os.path.join(self.split_dir, lidar_dir)
         self.depth_dir = os.path.join(self.split_dir, depth_dir)
-        self.pred_dir = os.path.join(self.split_dir, pred_dir)
+        self.pred_dir2 = os.path.join(self.split_dir, pred_dir)
+        self.pred_dir1 = os.path.join(self.pred_dir2, pred_dir2)
+        self.pred_dir0 = os.path.join(self.pred_dir1, pred_dir3)
+        # print('***********************************222**********************************')
+        # print(self.pred_dir0)
+        # print('***********************************222**********************************')
 
     def __len__(self):
         return self.num_samples
@@ -79,14 +93,17 @@ class kitti_object(object):
         return utils.Calibration(calib_filename)
 
     def get_label_objects(self, idx):
-        assert idx < self.num_samples and self.split == "training"
+        #assert idx < self.num_samples and self.split == "training"
         label_filename = os.path.join(self.label_dir, "%06d.txt" % (idx))
         return utils.read_label(label_filename)
 
     def get_pred_objects(self, idx):
         assert idx < self.num_samples
-        pred_filename = os.path.join(self.pred_dir, "%06d.txt" % (idx))
-        is_exist = os.path.exists(pred_filename)
+        pred_filename = os.path.join(self.pred_dir0, "%06d.txt" % (idx))
+        print('***********************111*************************************')
+        print(pred_filename)
+        # is_exist = os.path.exists(pred_filename)
+        is_exist = pred_filename
         if is_exist:
             return utils.read_label(pred_filename)
         else:
@@ -181,12 +198,11 @@ def viz_kitti_video():
         raw_input()
     return
 
-
 def show_image_with_boxes(img, objects, calib, show3d=True, depth=None):
     """ Show image with 2D bounding boxes """
     img1 = np.copy(img)  # for 2d bbox
     img2 = np.copy(img)  # for 3d bbox
-    #img3 = np.copy(img)  # for 3d bbox
+    img3 = np.copy(img)  # for 3d bbox
     #TODO: change the color of boxes
     for obj in objects:
         if obj.type == "DontCare":
@@ -196,7 +212,7 @@ def show_image_with_boxes(img, objects, calib, show3d=True, depth=None):
             img1,
             (int(obj.xmin), int(obj.ymin)),
             (int(obj.xmax), int(obj.ymax)),
-            (0, 255, 0),
+            (0, 255, 0),                                              # color (B,G,R)
             2,
         )
         if obj.type == "Pedestrian":
@@ -217,13 +233,14 @@ def show_image_with_boxes(img, objects, calib, show3d=True, depth=None):
         )
         box3d_pts_2d, _ = utils.compute_box_3d(obj, calib.P)
         if obj.type == "Car":
+            print('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
             img2 = utils.draw_projected_box3d(img2, box3d_pts_2d, color=(0, 255, 0))
         elif obj.type == "Pedestrian":
             img2 = utils.draw_projected_box3d(img2, box3d_pts_2d, color=(255, 255, 0))
         elif obj.type == "Cyclist":
             img2 = utils.draw_projected_box3d(img2, box3d_pts_2d, color=(0, 255, 255))
-
-
+        
+        
         # project
         # box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
         # box3d_pts_32d = utils.box3d_to_rgb_box00(box3d_pts_3d_velo)
@@ -231,86 +248,173 @@ def show_image_with_boxes(img, objects, calib, show3d=True, depth=None):
         # img3 = utils.draw_projected_box3d(img3, box3d_pts_32d)
     # print("img1:", img1.shape)
     cv2.imshow("2dbox", img1)
+    cv2.imshow("3dbox", img2)
     # print("img3:",img3.shape)
     # Image.fromarray(img3).show()
-    show3d = True
-    if show3d:
-        # print("img2:",img2.shape)
-        cv2.imshow("3dbox", img2)
-    if depth is not None:
-        cv2.imshow("depth", depth)
+    # show3d = True
+    # if show3d:
+    #     print(':::::::::::::::::::::::::::::::img2:::::::')
+    #     # print("img2:",img2.shape)
+    #     cv2.imshow("3dbox", img2)
+    # if depth is not None:
+    #     cv2.imshow("depth", depth)
+    
+    
+    # if objects_pred is not None:
+    #     print('::::::::::::::::::::::pred:::::::::::::::::::::::')
+    #     for obj in objects_pred:
+    #         if obj.type == "DontCare":
+    #             continue
+    #         else :
+    #             cv2.rectangle(
+    #             img1,
+    #             (int(obj.xmin), int(obj.ymin)),
+    #             (int(obj.xmax), int(obj.ymax)),
+    #             (0, 0, 255),
+    #             2,
+    #         )
+    #         box3d_pts_2d, _ = utils.compute_box_3d(obj, calib.P)
+    #         img3 = utils.draw_projected_box3d(img3, box3d_pts_2d, color=(0, 0, 255))
+    # cv2.imshow("2dbox", img1)
+    # #show3d = True
+    # if show3d:
+    #     print(':::::::::::::::::::::::::::::::img3:::::::')
+    #     cv2.imshow("3dbox", img3)
+    # if depth is not None:
+    #     cv2.imshow("depth", depth)
     
     return img1, img2
 
 
-def show_image_with_boxes_3type(img, objects, calib, objects2d, name, objects_pred):
+def show_image_with_boxes_3type(img, objects, calib, objects_pred,car_num):      # def show_image_with_boxes_3type(img, objects, calib, objects2d, name, objects_pred):
     """ Show image with 2D bounding boxes """
     img1 = np.copy(img)  # for 2d bbox
+    #img2 = np.copy(img)
     type_list = ["Pedestrian", "Car", "Cyclist"]
     # draw Label
-    color = (0, 255, 0)
+    #color = (0, 255, 0)                                                                                  color = (青, 緑, 赤)
+    # x,y,w,h = 0,0,150,75
+    # cv2.rectangle(img1, (x, x), (x + w, y + h), (0,0,0), -1)
+    # create same size image of background color
+    bg_color = (0,0,0)
+    bg = np.full((img1.shape), bg_color, dtype=np.uint8)
     for obj in objects:
         if obj.type not in type_list:
             continue
-        cv2.rectangle(
-            img1,
-            (int(obj.xmin), int(obj.ymin)),
-            (int(obj.xmax), int(obj.ymax)),
-            color,
-            3,
-        )
-    startx = 5
-    font = cv2.FONT_HERSHEY_SIMPLEX
+        box3d_pts_2d, _ = utils.compute_box_3d(obj, calib.P)
 
-    text_lables = [obj.type for obj in objects if obj.type in type_list]
-    text_lables.insert(0, "Label:")
-    for n in range(len(text_lables)):
-        text_pos = (startx, 25 * (n + 1))
-        cv2.putText(img1, text_lables[n], text_pos, font, 0.5, color, 0, cv2.LINE_AA)
-    # draw 2D Pred
-    color = (0, 0, 255)
-    for obj in objects2d:
-        cv2.rectangle(
-            img1,
-            (int(obj.box2d[0]), int(obj.box2d[1])),
-            (int(obj.box2d[2]), int(obj.box2d[3])),
-            color,
-            2,
-        )
-    startx = 85
-    font = cv2.FONT_HERSHEY_SIMPLEX
+        if obj.type == "Car":
+            color = (0, 255, 0)
+            img1 = utils.draw_projected_box3d(img1, box3d_pts_2d, color=(0, 255, 0))
+            startx = 5
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            text_lables = [obj.type for obj in objects if obj.type in type_list]
+            #text_lables.insert(0, "Label:")
+            #for n in range(len(text_lables)):
+                #text_pos = (startx, 25 + 25 * (n + 1))  
+            text_pos = (startx, 50)
+            #cv2.putText(bg, 'Car %d'% len(text_lables), text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+            cv2.putText(bg, 'Car %d'% car_num, text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+            # n=1
 
-    text_lables = [type_list[obj.typeid - 1] for obj in objects2d]
-    text_lables.insert(0, "2D Pred:")
-    for n in range(len(text_lables)):
-        text_pos = (startx, 25 * (n + 1))
-        cv2.putText(img1, text_lables[n], text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+
+        # elif obj.type == "Pedestrian":
+        #     #img1 = utils.draw_projected_box3d(img1, box3d_pts_2d, color=(255, 255, 0))
+        #     color = (255, 0, 0)
+        #     img1 = utils.draw_projected_box3d(img1, box3d_pts_2d, color=(255, 0, 0))
+        #     startx = 5
+        #     font = cv2.FONT_HERSHEY_SIMPLEX
+        #     text_lables = [obj.type for obj in objects if obj.type in type_list]
+        #     #text_lables.insert(0, "Label:")
+        #     # for n in range(len(text_lables)):
+        #     #     text_pos = (startx, 25+25 * (n + 1))
+        #     #    cv2.putText(bg, text_lables[n], text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+        #     # if n == 0:
+        #     #    text_pos = (startx, 50)
+        #     #    n=2
+        #     # elif n==1:
+        #     #    text_pos = (startx, 75)
+        #     #    n=3
+        #     cv2.putText(bg, 'Pedestrian %d'% len(text_lables), text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+            
+
+        # elif obj.type == "Cyclist":
+        #     #img1 = utils.draw_projected_box3d(img1, box3d_pts_2d, color=(0, 255, 255))
+        #     color = (0, 255, 255)
+        #     img1 = utils.draw_projected_box3d(img1, box3d_pts_2d, color=(0, 255, 255))
+        #     startx = 5
+        #     font = cv2.FONT_HERSHEY_SIMPLEX
+        #     text_lables = [obj.type for obj in objects if obj.type in type_list]
+        #     #text_lables.insert(0, "Label:")
+        #     # for n in range(len(text_lables)):
+        #     #     text_pos = (startx, 25 + 25 * (n + 1))
+        #     #     cv2.putText(bg, text_lables[n], text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+        #     # if n == 0:
+        #     #    text_pos = (startx, 50)
+        #     #    m=0
+        #     #    print('::::::::::::00::::::::::::::::::::::::')
+        #     # elif n==1:
+        #     #    text_pos = (startx, 75)
+        #     #    m=1
+        #     # elif n==2:
+        #     #    text_pos = (startx, 75)
+        #     #    m=1
+        #     # elif n==3:
+        #     #    text_pos = (startx, 100)
+        #     #    m=2
+        #     text_pos = (startx, 50)
+        #     cv2.putText(bg, 'Cyclist %d'% len(text_lables), text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+        
     # draw 3D Pred
+    preCar_num = 0
     if objects_pred is not None:
-        color = (255, 0, 0)
+        color = (0, 0, 255)
         for obj in objects_pred:
             if obj.type not in type_list:
                 continue
-            cv2.rectangle(
-                img1,
-                (int(obj.xmin), int(obj.ymin)),
-                (int(obj.xmax), int(obj.ymax)),
-                color,
-                1,
-            )
-        startx = 165
+            if obj.type == 'Car':
+               preCar_num += 1
+            
+            box3d_pts_2d, _ = utils.compute_box_3d(obj, calib.P)
+            img1 = utils.draw_projected_box3d(img1, box3d_pts_2d, color=(0, 0, 255))
+        startx = 100
         font = cv2.FONT_HERSHEY_SIMPLEX
+        #box3d_pts_2d, _ = utils.compute_box_3d(obj, calib.P)
+        #img2 = utils.draw_projected_box3d(img2, box3d_pts_2d, color=(0, 255, 0))
 
         text_lables = [obj.type for obj in objects_pred if obj.type in type_list]
-        text_lables.insert(0, "3D Pred:")
-        for n in range(len(text_lables)):
-            text_pos = (startx, 25 * (n + 1))
-            cv2.putText(
-                img1, text_lables[n], text_pos, font, 0.5, color, 0, cv2.LINE_AA
-            )
+        #text_lables.insert(0, "3D Pred:")
+        # for n in range(len(text_lables)):
+        #     text_pos = (startx, 25 + 25 * (n + 1))
+        #     cv2.putText(bg, text_lables[n], text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+        text_pos = (startx, 50)
+        #cv2.putText(bg, 'Car %d'% len(text_lables), text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+        cv2.putText(bg, 'Car %d'% preCar_num, text_pos, font, 0.5, color, 0, cv2.LINE_AA)
+        text_lables = 'Label:'
+        cv2.putText(bg, text_lables, (5,25), font, 0.5, (255,255,255), 0, cv2.LINE_AA)
+        text_lables = '3D Pred:'
+        cv2.putText(bg, text_lables, (100,25), font, 0.5, (255,255,255), 0, cv2.LINE_AA)
+        
+        # if m==0 :
+        #     hight = 60
+        #     print(':::::::::::::::::m=0:::::::::::::::::::::::')
+        # if m==1 :
+        #     print(':::::::::::::::::m=1:::::::::::::::::::::::')
+        #     hight = 85
+        # if m==2 :
+        #     print(':::::::::::::::::m=2:::::::::::::::::::::::')
+        #     hight = 110
+        x,y,w,h = 0,0,175,60
+        # copy bounding box region from bg to img
+        result = img1.copy()
+        result[y:y+h, x:x+w] = bg[y:y+h, x:x+w]
+        
+    
 
-    cv2.imshow("with_bbox", img1)
-    cv2.imwrite("imgs/" + str(name) + ".png", img1)
+    cv2.imshow("3d_bbox", result)
+    #cv2.imshow("with_bbox", img2)
+
+    #cv2.imwrite("imgs/" + str(name) + ".png", img1)
 
 
 def get_lidar_in_image_fov(
@@ -331,7 +435,6 @@ def get_lidar_in_image_fov(
     else:
         return imgfov_pc_velo
 
-
 def get_lidar_index_in_image_fov(
     pc_velo, calib, xmin, ymin, xmax, ymax, return_more=False, clip_distance=2.0
 ):
@@ -345,7 +448,6 @@ def get_lidar_index_in_image_fov(
     )
     fov_inds = fov_inds & (pc_velo[:, 0] > clip_distance)
     return fov_inds
-
 
 def depth_region_pt3d(depth, obj):
     b = obj.box2d
@@ -365,8 +467,8 @@ def get_depth_pt3d(depth):
             pt3d.append([i, j, depth[i, j]])
     return np.array(pt3d)
 
-
-def show_lidar_with_depth(
+#3D点群マップを作成(バウンディングボックスも)
+def show_lidar_with_depth( 
     pc_velo,
     objects,
     calib,
@@ -424,29 +526,29 @@ def show_lidar_with_depth(
         # Draw 3d bounding box
         _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
         box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
-        print("box3d_pts_3d_velo:")
-        print(box3d_pts_3d_velo)
+        # print("box3d_pts_3d_velo:")
+        # print(box3d_pts_3d_velo)
 
         #TODO: change the color of boxes
         if obj.type == "Car":
-            draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=(0,1,0), label=obj.type)
-        elif obj.type == "Pedestrian":
-            draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=(0,1,1), label=obj.type)
-        elif obj.type == "Cyclist":
-            draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=(1,1,0), label=obj.type)
+            draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=(0,1,0), label=obj.type)    # color  (R,G,B)
+        # elif obj.type == "Pedestrian":
+        #     draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=(0,1,1), label=obj.type)
+        # elif obj.type == "Cyclist":
+        #     draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=(1,1,0), label=obj.type)
 
-
+    # pred 
     if objects_pred is not None:
-        color = (1, 0, 0)
+        color = (1, 0, 0)                        
         for obj in objects_pred:
             if obj.type == "DontCare":
                 continue
             # Draw 3d bounding box
             _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
             box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
-            print("box3d_pts_3d_velo:")
-            print(box3d_pts_3d_velo)
-            draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=color)
+            #print("box3d_pts_3d_velo:")
+            #print(box3d_pts_3d_velo)
+            draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=color, label='pre'+ obj.type)
             # Draw heading arrow
             _, ori3d_pts_3d = utils.compute_orientation_3d(obj, calib.P)
             ori3d_pts_3d_velo = calib.project_rect_to_velo(ori3d_pts_3d)
@@ -567,8 +669,8 @@ def show_lidar_with_boxes(
         # Draw 3d bounding box
         _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
         box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
-        print("box3d_pts_3d_velo:")
-        print(box3d_pts_3d_velo)
+        # print("box3d_pts_3d_velo:")
+        # print(box3d_pts_3d_velo)
 
         draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=color)
 
@@ -608,8 +710,8 @@ def show_lidar_with_boxes(
             # Draw 3d bounding box
             _, box3d_pts_3d = utils.compute_box_3d(obj, calib.P)
             box3d_pts_3d_velo = calib.project_rect_to_velo(box3d_pts_3d)
-            print("box3d_pts_3d_velo:")
-            print(box3d_pts_3d_velo)
+            # print("box3d_pts_3d_velo:")
+            # print(box3d_pts_3d_velo)
             draw_gt_boxes3d([box3d_pts_3d_velo], fig=fig, color=color)
             # Draw heading arrow
             _, ori3d_pts_3d = utils.compute_orientation_3d(obj, calib.P)
@@ -734,6 +836,7 @@ def dataset_viz(root_dir, args):
     dataset = kitti_object(root_dir, split=args.split, args=args)
     ## load 2d detection results
     #objects2ds = read_det_file("box2d.list")
+    
 
     if args.show_lidar_with_depth:
         import mayavi.mlab as mlab
@@ -742,20 +845,36 @@ def dataset_viz(root_dir, args):
             figure=None, bgcolor=(0, 0, 0), fgcolor=None, engine=None, size=(1000, 500)
         )
     for data_idx in range(len(dataset)):
+        # print('****************************333**************************************')
+        # print(data_idx)
         if args.ind > 0:
             data_idx = args.ind
-        # Load data from dataset
-        if args.split == "training":
-            objects = dataset.get_label_objects(data_idx)
-        else:
-            objects = []
-        #objects2d = objects2ds[data_idx]
+            #print('****************************444**************************************')
 
+        # Load data from dataset
+        #if args.split == "testing":
+
+            # ishiyama data GT(ground truth)
+
+            #objects = dataset.get_label_objects(data_idx)
+        # else:
+        #     objects = []
+        #objects = []      # 確認用　labelデータがないと可視化できない
+        #objects2d = objects2ds[data_idx]
+        objects = dataset.get_label_objects(data_idx)
+        
         objects_pred = None
+        # print('*********************333******************************')
+        # print(args)
+        # print('*********************333******************************')
         if args.pred:
             # if not dataset.isexist_pred_objects(data_idx):
             #    continue
+
+            # ishiyama here pred data(NN output data)
+
             objects_pred = dataset.get_pred_objects(data_idx)
+            
             if objects_pred == None:
                 continue
         if objects_pred == None:
@@ -785,7 +904,7 @@ def dataset_viz(root_dir, args):
         # depth_height, depth_width, depth_channel = img.shape
 
         # print(('Image shape: ', img.shape))
-
+        car_num=0
         if args.stat:
             stat_lidar_with_boxes(pc_velo, objects, calib)
             continue
@@ -796,16 +915,27 @@ def dataset_viz(root_dir, args):
                 print("=== {} object ===".format(n_obj + 1))
                 obj.print_object()
                 n_obj += 1
+                if obj.type == 'Car':
+                   car_num += 1
 
         # Draw 3d box in LiDAR point cloud
         if args.show_lidar_topview_with_boxes:
             # Draw lidar top view
             show_lidar_topview_with_boxes(pc_velo, objects, calib, objects_pred)
+            
 
         # show_image_with_boxes_3type(img, objects, calib, objects2d, data_idx, objects_pred)
+        # ishiyama tell important information below
         if args.show_image_with_boxes:
             # Draw 2d and 3d boxes on image
             show_image_with_boxes(img, objects, calib, True, depth)
+            
+        if args.show_image_with_boxes_3type:
+            # Draw 2d and 3d boxes on image
+            print('::::::::::::::::::::::::::::::11111:::::::::::::::::::::::::::::::::')
+            show_image_with_boxes_3type(img, objects, calib, objects_pred,car_num)  # koko change
+            print('::::::::::::::::::::::::::::::333333:::::::::::::::::::::::::::::::::')
+        
         if args.show_lidar_with_depth:
             # Draw 3d box in LiDAR point cloud
             show_lidar_with_depth(
@@ -823,16 +953,26 @@ def dataset_viz(root_dir, args):
                 save=args.save_depth,
                 pc_label=args.pc_label,
             )
+            #print('::::::::::::::::::::::::::::::44444:::::::::::::::::::::::::::::::::')
             # show_lidar_with_boxes(pc_velo, objects, calib, True, img_width, img_height, \
             #    objects_pred, depth, img)
+        # to ishiyama data
         if args.show_lidar_on_image:
             # Show LiDAR points on image.
             show_lidar_on_image(pc_velo[:, 0:3], img, calib, img_width, img_height)
+            #print('::::::::::::::::::::::::::::::555555:::::::::::::::::::::::::::::::::')
+        
+        elapsed_time = time.time() - start 
+        print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
         input_str = raw_input()
 
         mlab.clf()
         if input_str == "killall":
             break
+        elapsed_time = time.time() - start 
+        print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
+        
+
 
 
 def depth_to_lidar_format(root_dir, args):
@@ -912,8 +1052,8 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--split",
-        type=str,
-        default="training",
+        type=str,                                   
+        default="training",         # default をtraining, testing に変更して、training画像かtest画像か、決めれる
         help="use training split or testing split (default: training)",
     )
     parser.add_argument(
@@ -971,11 +1111,23 @@ if __name__ == "__main__":
         action="store_true",
         help="show lidar topview",
     )
+    parser.add_argument(
+        "--show_image_with_boxes_3type", action="store_true", help="show lidar 3type"
+    )
+
     args = parser.parse_args()
+    #print('********************11***************')
+    #print(args)
+    import time 
+    start = time.time()
     if args.pred:
+        # print('*******************444*********************************')
+        # print(args.pred)
         assert os.path.exists(args.dir + "/" + args.split + "/pred")
 
     if args.vis:
         dataset_viz(args.dir, args)
     if args.gen_depth:
         depth_to_lidar_format(args.dir, args)
+    elapsed_time = time.time() - start 
+    print ("elapsed_time:{0}".format(elapsed_time) + "[sec]")
